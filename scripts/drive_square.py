@@ -7,7 +7,7 @@ import math
 from geometry_msgs.msg import Twist, Vector3
 
 class DriveSquare(object):
-    """ This node commands the Turtlebot to drive in a square. """
+    """ This node commands the Turtlebot to drive in a square path. """
 
     def __init__(self):
         # initialize the ROS node
@@ -16,35 +16,27 @@ class DriveSquare(object):
         self.robot_movement_pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
     def run(self):
-        # set up the Twist message we want to send
+        # straight_line_twist is a message that drives the robot in a straight line at its maximum velocity
         straight_line_twist = Twist(
-            linear = Vector3(0.3, 0, 0),
+            linear = Vector3(0.26, 0, 0),
             angular = Vector3()
         )
+        # turn_twist is a message that rotates the robot at 90 degrees per second
         turn_twist = Twist(
             linear = Vector3(),
             angular = Vector3(0, 0, math.pi / 2)
-        )
-        stop_twist = Twist(
-            linear=Vector3(),
-            angular=Vector3()
         )
 
         # allow the publisher enough time to set up before publishing the first message
         rospy.sleep(1)
 
-        for i in range(4):
-            # publish the message
+        # continuously drive a straight path for 4 seconds, then turn 90 degrees
+        while not rospy.is_shutdown():
             self.robot_movement_pub.publish(straight_line_twist)
-            rospy.sleep(3)
-            self.robot_movement_pub.publish(stop_twist)
-            rospy.sleep(0.15)
+            rospy.sleep(4)
+            # turn at 90 degrees per second for 1.04 seconds to offset friction
             self.robot_movement_pub.publish(turn_twist)
-            rospy.sleep(1)
-            self.robot_movement_pub.publish(stop_twist)
-            rospy.sleep(0.15)
-
-        self.robot_movement_pub.publish(stop_twist)
+            rospy.sleep(1.04)
 
 if __name__ == '__main__':
     # instantiate the ROS node and run it
