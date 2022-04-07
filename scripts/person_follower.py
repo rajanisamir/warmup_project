@@ -12,12 +12,15 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 
-# How close we will get to the person.
-follow_distance = 0.3
-
 class PersonFollower(object):
     """ This node follows a person around the room. """
-    def __init__(self):
+
+    # Constructor parameters
+    #   follow_distance: how close we will get to the person.
+    #   k_p_ang:         proportional control factor for angular velocity
+    #   k_p_lin:         proportional control factor for linear velocity
+    #   drive_angle:     error angle at which the robot will begin moving linearly
+    def __init__(self, follow_distance=0.3, k_p_ang=0.03, k_p_lin=0.25, drive_angle=45):        
         # Start rospy node.
         rospy.init_node("follow_person")
 
@@ -33,15 +36,16 @@ class PersonFollower(object):
         ang = Vector3()
         self.twist = Twist(linear=lin,angular=ang)
 
-        # Set proportional control factors for angular and linear velocity.
-        self.k_p_ang = 0.03
-        self.k_p_lin = 0.25
+        # Initialize constructor parameters.
+        self.k_p_ang = k_p_ang
+        self.k_p_lin = k_p_lin
+        self.follow_distance = follow_distance
+        self.drive_angle = drive_angle
 
+    # Determine nearest object by looking at scan data from all angles
+    #   the robot, set velocity based on that information, and
+    #   publish to cmd_vel.
     def process_scan(self, data):
-        # Determine nearest object by looking at scan data from all angles
-        #   the robot, set velocity based on that information, and
-        #   publish to cmd_vel.
-
         # Initialize nearest_index and nearest_distance, which will keep
         #   track of the angle and distance to the object nearest to the
         #   robot.
@@ -51,7 +55,6 @@ class PersonFollower(object):
         # Iterate through data.ranges, which contains the nearest object
         #   at each degree increment. If the value is non-zero, there is
         #   an object in that direction.
-        #   TODO: ENSURE IT'S OKAY TO COMPARE FLOATS IN THIS WAY
         #   TODO: MAKE SURE IT STOPS WHEN THERE'S NOTHING AROUND
         for i in range(360):
             if data.ranges[i] > 0.0 and data.ranges[i] < nearest_distance:
@@ -63,14 +66,14 @@ class PersonFollower(object):
         #   respectively. The ternary operator is used to convert the range
         #   of angles 180-360 to -180-0, so that proportional control makes
         #   the robot turn in the correct direction.
-        error_distance = nearest_distance - follow_distance
+        error_distance = nearest_distance - self.follow_distance
         error_angle = nearest_index if nearest_index < 180 else nearest_index - 360
 
         # Set linear and angular velocity based on the proportional control
         #   mechanism. Only set a non-zero linear velocity if the robot is
         #   facing roughly the right direction.
         self.twist.angular.z = self.k_p_ang * error_angle
-        if (abs(error_angle) < 45):
+        if (abs(error_angle) < self.drive_angle):
             self.twist.linear.x = self.k_p_lin * error_distance
         else:
             self.twist.linear.x = 0
@@ -83,6 +86,6 @@ class PersonFollower(object):
         rospy.spin()
 
 if __name__ == '__main__':
-    # Declare a node and run it.
+    # Declare a node with default constructor parameters and run it.
     node = PersonFollower()
     node.run()
