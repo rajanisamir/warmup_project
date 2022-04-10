@@ -20,7 +20,7 @@ class PersonFollower(object):
     #   k_p_ang:         proportional control factor for angular velocity
     #   k_p_lin:         proportional control factor for linear velocity
     #   drive_angle:     error angle at which the robot will begin moving linearly
-    def __init__(self, follow_distance=0.3, k_p_ang=0.03, k_p_lin=0.25, drive_angle=45):        
+    def __init__(self, follow_distance=0.4, k_p_ang=0.022, k_p_lin=0.2, drive_angle=45):        
         # Start rospy node.
         rospy.init_node("follow_person")
 
@@ -83,10 +83,10 @@ class PersonFollower(object):
         else:
             self.twist.linear.x = 0
 
-        # Clamp angular velocity to 1.82 rad/s and linear velocity to 0.26 m/s
+        # Clamp angular speed to 1.82 rad/s and linear speed to 0.26 m/s
         #   to ensure we don't exceed the maximum velocity of the Turtlebot.
-        self.twist.angular.z = min(1.82, self.twist.angular.z)
-        self.twist.linear.x = min(0.26, self.twist.linear.x)
+        self.twist.angular.z = min(1.82, max(self.twist.angular.z, -1.82))
+        self.twist.linear.x = min(0.26, max(self.twist.linear.x, -0.26))
     
         # Publish Twist message to cmd_vel.
         self.twist_pub.publish(self.twist)

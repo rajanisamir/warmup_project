@@ -13,15 +13,14 @@ from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
 
 class WallFollower(object):
-    """ This node follows a person around the room. """
-
+    """ This node instructs the robot to follow a wall. """
     # Constructor parameters
     #   wall_distance:   the distance we should maintain to the wall
     #   k_p_dist:        proportional control factor controlling how much the distance
     #                      from the wall affects the desired angle
     #   k_p_ang:         proportional control factor controlling how much the error in
     #                      angle affects the angular velocity 
-    def __init__(self, wall_distance=0.4, k_p_ang=0.01, k_p_dist=50):        
+    def __init__(self, lin_speed=0.075, wall_distance=0.4, k_p_ang=0.018, k_p_dist=40):        
         # Start rospy node.
         rospy.init_node("follow_wall")
 
@@ -41,6 +40,7 @@ class WallFollower(object):
         self.wall_distance = wall_distance
         self.k_p_ang = k_p_ang
         self.k_p_dist = k_p_dist
+        self.lin_speed = lin_speed
 
     # Determine nearest object by looking at scan data from all angles
     #   the robot, set velocity based on that information, and
@@ -50,35 +50,39 @@ class WallFollower(object):
         #   track of the angle and distance to the object nearest to the
         #   robot.
         nearest_index = -1
-        nearest_distance = 10
+        nearest_distance = 10 # Maximum LiDAR distance is 4.1m, so init value is safe.
 
         # Iterate through data.ranges, which contains the nearest object
         #   at each degree increment. If the value is non-zero, there is
         #   an object in that direction.
-        #   TODO: MAKE SURE IT STOPS WHEN THERE'S NOTHING AROUND
         for i in range(360):
             if data.ranges[i] > 0.0 and data.ranges[i] < nearest_distance:
                 nearest_index = i
                 nearest_distance = data.ranges[i]
+
+        # If no object was found within the LiDAR range, stop the robot.
+        if (nearest_distance == 10):
+            self.twist.linear.x = 0
+            self.twist.angular.z = 0
+            self.twist_pub.publish(self.twist)
+            return
 
         # Calculate the discrepancy between the robot's distance and angle
         #   and the desired wall distance and the angle (90 degrees),
         #   respectively. The ternary operator is used to convert the range
         #   of angles 90-270 to 0-180, and the range TODO so that proportional control makes
         #   the robot turn in the correct direction.
-
-        # TODO: say clamp value
         error_distance = nearest_distance - self.wall_distance
-        desired_angle = max(0, min(180, 90 - (nearest_distance - self.wall_distance) * self.k_p_dist))
+        desired_angle = max(0, min(180, 90 - error_distance * self.k_p_dist))
         error_angle = (nearest_index - desired_angle if nearest_index < 270 else nearest_index - 450)
-
-        print("Error distance: ", error_distance)
-        print("Desired_angle: ", desired_angle)
-        print("Error angle: ", error_angle)
 
         # Set velocity based on the proportional control mechanism.
         self.twist.angular.z = self.k_p_ang * error_angle
-        self.twist.linear.x = 0.05
+        self.twist.linear.x = self.lin_speed
+
+        # Clamp angular speed to 1.82 rad/s and linear speed to 0.26 m/s
+        #   to ensure we don't exceed the maximum velocity of the Turtlebot.
+        self.twist.angular.z = min(1.82, max(self.twist.angular.z, -1.82))
     
         # Publish Twist message to cmd_vel.
         self.twist_pub.publish(self.twist)
