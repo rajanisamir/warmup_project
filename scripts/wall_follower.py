@@ -70,11 +70,12 @@ class WallFollower(object):
         # Calculate the discrepancy between the robot's distance and angle
         #   and the desired wall distance and the angle (90 degrees),
         #   respectively. The ternary operator is used to convert the range
-        #   of angles 90-270 to 0-180, and the range TODO so that proportional control makes
-        #   the robot turn in the correct direction.
+        #   of angles so that proportional control makes the robot turn in the
+        #   correct direction.
+        
         error_distance = nearest_distance - self.wall_distance
         desired_angle = max(0, min(180, 90 - error_distance * self.k_p_dist))
-        error_angle = (nearest_index - desired_angle if nearest_index < 270 else nearest_index - 450)
+        error_angle = (nearest_index - desired_angle if nearest_index < (180 + desired_angle) else nearest_index - (desired_angle + 360))
 
         # Set velocity based on the proportional control mechanism.
         self.twist.angular.z = self.k_p_ang * error_angle
