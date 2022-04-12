@@ -15,6 +15,7 @@ from geometry_msgs.msg import Vector3
 class WallFollower(object):
     """ This node instructs the robot to follow a wall. """
     # Constructor parameters
+    #   lin_speed:       the linear speed of the robot
     #   wall_distance:   the distance we should maintain to the wall
     #   k_p_dist:        proportional control factor controlling how much the distance
     #                      from the wall affects the desired angle
@@ -72,7 +73,6 @@ class WallFollower(object):
         #   respectively. The ternary operator is used to convert the range
         #   of angles so that proportional control makes the robot turn in the
         #   right direction.
-        
         error_distance = nearest_distance - self.wall_distance
         desired_angle = max(0, min(180, 90 - error_distance * self.k_p_dist))
         error_angle = (nearest_index - desired_angle if nearest_index < (180 + desired_angle) else nearest_index - (desired_angle + 360))
