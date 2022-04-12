@@ -71,7 +71,7 @@ class WallFollower(object):
         #   and the desired wall distance and the angle (90 degrees),
         #   respectively. The ternary operator is used to convert the range
         #   of angles so that proportional control makes the robot turn in the
-        #   correct direction.
+        #   right direction.
         
         error_distance = nearest_distance - self.wall_distance
         desired_angle = max(0, min(180, 90 - error_distance * self.k_p_dist))
